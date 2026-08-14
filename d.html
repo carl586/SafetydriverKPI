@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Safety KPI - MNM Freight</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: 600; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-content { max-width: 520px; width: 95%; max-height: 92vh; overflow-y: auto; }
+    .input-error { border-color: #ef4444 !important; box-shadow: 0 0 0 3px rgba(239,68,68,0.2); }
+    .subtab-active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: 600; }
+  </style>
+</head>
+<body class="bg-gray-100">
+
+  <!-- Header -->
+  <nav class="bg-white shadow sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+      <h1 class="text-2xl font-bold text-blue-700">Safety KPI</h1>
+      <div class="flex gap-8 text-sm">
+        <button onclick="switchTab(0)" class="tab tab-active px-4 py-2" id="tab-0">Dashboard</button>
+        <button onclick="switchTab(1)" class="tab px-4 py-2" id="tab-1">Violations</button>
+        <button onclick="switchTab(2)" class="tab px-4 py-2" id="tab-2">Drivers</button>
+        <button onclick="switchTab(3)" class="tab px-4 py-2" id="tab-3">Dispatches</button>
+      </div>
+    </div>
+  </nav>
+
+ <!-- DASHBOARD -->
+  <div id="content-0" class="tab-content max-w-7xl mx-auto px-6 py-8">
+    <h2 class="text-3xl font-bold mb-8">Dashboard</h2>
+    
+    <div class="bg-white p-8 rounded-3xl shadow mb-8">
+      <div class="flex justify-between items-center">
+        <div>
+          <h3 class="text-3xl font-semibold">MNM Freight</h3>
+          <p class="text-gray-500">Total Drivers: <span id="total-drivers">4</span> | Active Dispatches: 12 | Total Violations: <span id="total-violations">0</span> | Total Accidents: <span id="total-accidents">0</span></p>
+        </div>
+        <div class="text-right">
+          <p class="text-5xl font-bold text-red-600" id="total-points">0</p>
+          <p class="text-gray-500">Total Violation + Accident Points</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-10" id="category-charts">
+      <!-- Charts will be dynamically populated -->
+    </div>
+
+    <div class="bg-white rounded-3xl shadow">
+      <div class="p-6 border-b flex justify-between items-center">
+        <h3 class="text-xl font-semibold">Drivers with Highest Points</h3>
+        <div class="flex gap-3">
+          <input type="text" id="leader-search" placeholder="Search driver..." class="border rounded-xl px-4 py-2 w-64" onkeyup="filterLeaderboard()">
+          <select id="category-filter" onchange="filterLeaderboard()" class="border rounded-xl px-4 py-2">
+            <option value="all">All Categories</option>
+            <option value="Unsafe Driving">Unsafe Driving</option>
+            <option value="Driver Fitness">Driver Fitness</option>
+            <option value="Controlled Substance">Controlled Substance</option>
+            <option value="Vehicle Maintenance">Vehicle Maintenance</option>
+            <option value="Hours of Service">Hours of Service</option>
+            <option value="Crash Indicator">Crash Indicator</option>
+          </select>
+        </div>
+      </div>
+      <table class="w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="p-5 text-left w-20">Rank</th>
+            <th class="p-5 text-left">Driver</th>
+            <th class="p-5 text-left">Truck</th>
+            <th class="p-5 text-left">Company</th>
+            <th class="p-5 text-left">Total Points</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboard-body" class="divide-y"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- VIOLATIONS PAGE -->
+  <div id="content-1" class="tab-content max-w-7xl mx-auto px-6 py-8 hidden">
+    <div class="flex justify-between items-center mb-8">
+      <h2 class="text-3xl font-bold">Safety Events Management</h2>
+      <div class="flex gap-4">
+        <button onclick="showRecordViolationModal()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-2xl flex items-center gap-2">
+          <i class="fas fa-plus"></i> Record Violation
+        </button>
+        <button onclick="showRecordAccidentModal()" class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-2xl flex items-center gap-2">
+          <i class="fas fa-car-crash"></i> Record Accident
+        </button>
+        <button onclick="showRecordSamsaraModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-2xl flex items-center gap-2">
+          <i class="fas fa-bell"></i> Add Samsara Event
+        </button>
+      </div>
+    </div>
+
+    <!-- Sub Navigation -->
+    <div class="flex border-b mb-6 bg-white rounded-t-3xl">
+      <button onclick="switchSubTab(0)" class="subtab subtab-active px-8 py-4 text-sm" id="subtab-0">All Events</button>
+      <button onclick="switchSubTab(1)" class="subtab px-8 py-4 text-sm" id="subtab-1">Violations</button>
+      <button onclick="switchSubTab(2)" class="subtab px-8 py-4 text-sm" id="subtab-2">Inspections</button>
+      <button onclick="switchSubTab(3)" class="subtab px-8 py-4 text-sm" id="subtab-3">Accidents</button>
+      <button onclick="switchSubTab(4)" class="subtab px-8 py-4 text-sm" id="subtab-4">Samsara Events</button>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow overflow-hidden">
+      <table class="w-full">
+        <thead class="bg-gray-50" id="events-table-head">
+          <!-- Dynamic header based on subtab -->
+        </thead>
+        <tbody id="all-events-body" class="divide-y"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- DRIVERS PAGE -->
+  <div id="content-2" class="tab-content max-w-7xl mx-auto px-6 py-8 hidden">
+    <div class="flex justify-between items-center mb-8">
+      <h2 class="text-3xl font-bold">Drivers List</h2>
+      <button onclick="showAddDriverModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl flex items-center gap-2">
+        <i class="fas fa-plus"></i> Add New Driver
+      </button>
+    </div>
+    <div class="bg-white rounded-3xl shadow overflow-hidden">
+      <table class="w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="p-5 text-left">Driver</th>
+            <th class="p-5 text-left">Truck</th>
+            <th class="p-5 text-left">Dispatch</th>
+            <th class="p-5 text-left">Company</th>
+            <th class="p-5 text-left font-bold">TOTAL POINTS</th>
+          </tr>
+        </thead>
+        <tbody id="drivers-body" class="divide-y"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- DISPATCHES PAGE -->
+  <div id="content-3" class="tab-content max-w-7xl mx-auto px-6 py-8 hidden">
+    <h2 class="text-3xl font-bold mb-8">Dispatches List</h2>
+    <div class="bg-white p-20 rounded-3xl shadow text-center text-gray-500">
+      Dispatches List - Coming Soon
+    </div>
+  </div>
+
+  <!-- MODALS -->
+  <!-- Add Driver Modal -->
+  <div id="add-driver-modal" class="modal">
+    <div class="modal-content bg-white rounded-3xl p-8 shadow-xl">
+      <h3 class="text-2xl font-bold mb-6">Add New Driver</h3>
+      <div class="space-y-6">
+        <div><label class="block text-sm font-medium mb-2">Driver Name</label><input type="text" id="new-driver-name" class="w-full border rounded-xl px-4 py-3"></div>
+        <div class="grid grid-cols-2 gap-6">
+          <div><label class="block text-sm font-medium mb-2">Truck Number</label><input type="text" id="new-truck" class="w-full border rounded-xl px-4 py-3"></div>
+          <div><label class="block text-sm font-medium mb-2">Dispatch</label><input type="text" id="new-dispatch" class="w-full border rounded-xl px-4 py-3"></div>
+        </div>
+        <div><label class="block text-sm font-medium mb-2">Company</label><input type="text" id="new-company" class="w-full border rounded-xl px-4 py-3" value="MNM Freight"></div>
+      </div>
+      <div class="flex gap-4 mt-8">
+        <button onclick="addNewDriver()" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-medium">Add Driver</button>
+        <button onclick="hideAddDriverModal()" class="flex-1 bg-gray-200 py-4 rounded-2xl font-medium">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Record Violation Modal -->
+  <div id="record-violation-modal" class="modal">
+    <div class="modal-content bg-white rounded-3xl p-8 shadow-xl">
+      <h3 class="text-2xl font-bold mb-6">Record New Violation</h3>
+      <form id="violation-form" onsubmit="submitViolation(event)">
+        <div class="space-y-6">
+          <div>
+            <label class="block text-sm font-medium mb-2">Search & Select Driver <span class="text-red-500">*</span></label>
+            <input type="text" id="driver-search" placeholder="Type driver name..." class="w-full border rounded-xl px-4 py-3" onkeyup="filterDriverSuggestions()">
+            <div id="driver-suggestions" class="hidden border rounded-xl mt-1 bg-white shadow-lg max-h-60 overflow-auto"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-6">
+            <div><label class="block text-sm font-medium mb-2">Truck Number *</label><input type="text" id="truck" class="w-full border rounded-xl px-4 py-3"></div>
+            <div><label class="block text-sm font-medium mb-2">Dispatch *</label><input type="text" id="dispatch" class="w-full border rounded-xl px-4 py-3"></div>
+          </div>
+          <div><label class="block text-sm font-medium mb-2">Company</label><input type="text" id="company" class="w-full border rounded-xl px-4 py-3" value="MNM Freight"></div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Date</label>
+            <input type="date" id="violation-date" class="w-full border rounded-xl px-4 py-3">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Violation Category <span class="text-red-500">*</span></label>
+            <select id="category" class="w-full border rounded-xl px-4 py-3">
+              <option value="">-- Select Violation --</option>
+              <option>Unsafe Driving</option>
+              <option>Driver Fitness</option>
+              <option>Controlled Substance</option>
+              <option>Vehicle Maintenance</option>
+              <option>Hours of Service</option>
+              <option>Cargo Related</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div><label class="block text-sm font-medium mb-2">Description / Note *</label><textarea id="description" rows="3" class="w-full border rounded-xl px-4 py-3"></textarea></div>
+          <div class="grid grid-cols-3 gap-6">
+            <div><label class="block text-sm font-medium mb-2">Base Points</label><input type="number" id="points" value="10" class="w-full border rounded-xl px-4 py-3" oninput="updatePointsPreview()"></div>
+            <div><label class="block text-sm font-medium mb-2">Inspection?</label>
+              <select id="inspection" class="w-full border rounded-xl px-4 py-3" onchange="updatePointsPreview()">
+                <option value="no">No</option>
+                <option value="yes">Yes (×3)</option>
+              </select>
+            </div>
+            <div><label class="block text-sm font-medium mb-2">Final Points</label><input type="text" id="final-points" value="10" readonly class="w-full border rounded-xl px-4 py-3 bg-gray-50 font-bold"></div>
+          </div>
+        </div>
+        <div class="flex gap-4 mt-8">
+          <button type="submit" class="flex-1 bg-red-600 text-white py-4 rounded-2xl font-medium">Record Violation</button>
+          <button type="button" onclick="hideRecordViolationModal()" class="flex-1 bg-gray-200 py-4 rounded-2xl font-medium">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Record Accident Modal -->
+  <div id="record-accident-modal" class="modal">
+    <div class="modal-content bg-white rounded-3xl p-8 shadow-xl">
+      <h3 class="text-2xl font-bold mb-6">Record New Accident</h3>
+      <form id="accident-form" onsubmit="submitAccident(event)">
+        <div class="space-y-6">
+          <div>
+            <label class="block text-sm font-medium mb-2">Search & Select Driver <span class="text-red-500">*</span></label>
+            <input type="text" id="accident-driver-search" placeholder="Type driver name..." class="w-full border rounded-xl px-4 py-3" onkeyup="filterAccidentDriverSuggestions()">
+            <div id="accident-driver-suggestions" class="hidden border rounded-xl mt-1 bg-white shadow-lg max-h-60 overflow-auto"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-6">
+            <div><label class="block text-sm font-medium mb-2">Truck Number *</label><input type="text" id="accident-truck" class="w-full border rounded-xl px-4 py-3"></div>
+            <div><label class="block text-sm font-medium mb-2">Dispatch *</label><input type="text" id="accident-dispatch" class="w-full border rounded-xl px-4 py-3"></div>
+          </div>
+          <div><label class="block text-sm font-medium mb-2">Company</label><input type="text" id="accident-company" class="w-full border rounded-xl px-4 py-3" value="MNM Freight"></div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Date</label>
+            <input type="date" id="accident-date" class="w-full border rounded-xl px-4 py-3">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Severity <span class="text-red-500">*</span></label>
+            <select id="accident-severity" class="w-full border rounded-xl px-4 py-3" onchange="updateAccidentPointsPreview()">
+              <option value="Minor">Minor (10 pts)</option>
+              <option value="Moderate">Moderate (25 pts)</option>
+              <option value="Major">Major (50 pts)</option>
+              <option value="Severe">Severe (75 pts)</option>
+            </select>
+          </div>
+          
+          <div><label class="block text-sm font-medium mb-2">Description / Note *</label><textarea id="accident-description" rows="3" class="w-full border rounded-xl px-4 py-3"></textarea></div>
+          
+          <div class="grid grid-cols-2 gap-6">
+            <div><label class="block text-sm font-medium mb-2">Base Points</label><input type="number" id="accident-points" value="25" class="w-full border rounded-xl px-4 py-3" oninput="updateAccidentPointsPreview()"></div>
+            <div><label class="block text-sm font-medium mb-2">Final Points</label><input type="text" id="accident-final-points" value="25" readonly class="w-full border rounded-xl px-4 py-3 bg-gray-50 font-bold"></div>
+          </div>
+        </div>
+        <div class="flex gap-4 mt-8">
+          <button type="submit" class="flex-1 bg-orange-600 text-white py-4 rounded-2xl font-medium">Record Accident</button>
+          <button type="button" onclick="hideRecordAccidentModal()" class="flex-1 bg-gray-200 py-4 rounded-2xl font-medium">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Record Samsara Event Modal -->
+  <div id="record-samsara-modal" class="modal">
+    <div class="modal-content bg-white rounded-3xl p-8 shadow-xl">
+      <h3 class="text-2xl font-bold mb-6">Add Samsara Event</h3>
+      <form id="samsara-form" onsubmit="submitSamsaraEvent(event)">
+        <div class="space-y-6">
+          <div>
+            <label class="block text-sm font-medium mb-2">Search & Select Driver <span class="text-red-500">*</span></label>
+            <input type="text" id="samsara-driver-search" placeholder="Type driver name..." class="w-full border rounded-xl px-4 py-3" onkeyup="filterSamsaraDriverSuggestions()">
+            <div id="samsara-driver-suggestions" class="hidden border rounded-xl mt-1 bg-white shadow-lg max-h-60 overflow-auto"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-6">
+            <div><label class="block text-sm font-medium mb-2">Truck Number</label><input type="text" id="samsara-truck" class="w-full border rounded-xl px-4 py-3"></div>
+            <div><label class="block text-sm font-medium mb-2">Dispatch</label><input type="text" id="samsara-dispatch" class="w-full border rounded-xl px-4 py-3"></div>
+          </div>
+          <div><label class="block text-sm font-medium mb-2">Company</label><input type="text" id="samsara-company" class="w-full border rounded-xl px-4 py-3" value="MNM Freight"></div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Date</label>
+            <input type="date" id="samsara-date" class="w-full border rounded-xl px-4 py-3">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Event Type</label>
+            <select id="samsara-type" class="w-full border rounded-xl px-4 py-3">
+              <option>Harsh Braking</option>
+              <option>Speeding</option>
+              <option>Route Deviation</option>
+              <option>Idle Time</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div><label class="block text-sm font-medium mb-2">Description</label><textarea id="samsara-description" rows="3" class="w-full border rounded-xl px-4 py-3"></textarea></div>
+          <div><label class="block text-sm font-medium mb-2">Points</label><input type="number" id="samsara-points" value="5" class="w-full border rounded-xl px-4 py-3"></div>
+        </div>
+        <div class="flex gap-4 mt-8">
+          <button type="submit" class="flex-1 bg-purple-600 text-white py-4 rounded-2xl font-medium">Record Samsara Event</button>
+          <button type="button" onclick="hideRecordSamsaraModal()" class="flex-1 bg-gray-200 py-4 rounded-2xl font-medium">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Correction Modal (kept for internal use) -->
+  <div id="correction-modal" class="modal">
+    <div class="modal-content bg-white rounded-3xl p-8 shadow-xl">
+      <h3 class="text-2xl font-bold mb-6">Apply Correction</h3>
+      <div class="space-y-6">
+        <div id="correction-event-info" class="bg-gray-50 p-4 rounded-2xl"></div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2">Correction Type</label>
+          <select id="correction-type" class="w-full border rounded-xl px-4 py-3">
+            <option value="Warning">Warning</option>
+            <option value="Verbal Counseling">Verbal Counseling</option>
+            <option value="Written Warning">Written Warning</option>
+            <option value="Retraining">Retraining</option>
+            <option value="Suspension">Suspension</option>
+            <option value="Termination">Termination</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2">Points to Reduce</label>
+          <input type="number" id="corr-points" value="5" class="w-full border rounded-xl px-4 py-3">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2">Notes / Explanation</label>
+          <textarea id="correction-notes" rows="4" class="w-full border rounded-xl px-4 py-3" placeholder="Describe the corrective action taken..."></textarea>
+        </div>
+      </div>
+      <div class="flex gap-4 mt-8">
+        <button onclick="applyCorrectionFromDetail()" class="flex-1 bg-green-600 text-white py-4 rounded-2xl font-medium">Apply Correction</button>
+        <button onclick="hideCorrectionModal()" class="flex-1 bg-gray-200 py-4 rounded-2xl font-medium">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Driver Profile Modal -->
+  <div id="driver-profile-modal" class="modal">
+    <div class="modal-content bg-white rounded-3xl p-8 shadow-xl">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-2xl font-bold" id="profile-driver-name"></h3>
+        <button onclick="hideDriverProfileModal()" class="text-3xl text-gray-400 hover:text-gray-600">×</button>
+      </div>
+      <div class="grid grid-cols-2 gap-6 mb-8">
+        <div><p class="text-sm text-gray-500">Truck</p><p class="font-medium text-lg" id="profile-truck"></p></div>
+        <div><p class="text-sm text-gray-500">Dispatch</p><p class="font-medium text-lg" id="profile-dispatch"></p></div>
+        <div><p class="text-sm text-gray-500">Company</p><p class="font-medium" id="profile-company"></p></div>
+        <div><p class="text-sm text-gray-500">Total Points</p><span id="profile-total-points" class="inline-block px-5 py-1 rounded-full text-white font-semibold"></span></div>
+      </div>
+
+      <h4 class="font-semibold mb-3">Points by Category</h4>
+      <div id="profile-category-points" class="space-y-3 mb-8"></div>
+
+      <h4 class="font-semibold mb-3">Violation History</h4>
+      <div id="profile-violations" class="space-y-3 max-h-80 overflow-auto"></div>
+
+      <h4 class="font-semibold mb-3 mt-8">Accident History</h4>
+      <div id="profile-accidents" class="space-y-3 max-h-80 overflow-auto"></div>
+
+      <div class="flex gap-4 mt-10">
+        <button onclick="showEditDriverModal()" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-medium">Edit Driver Info</button>
+        <button onclick="hideDriverProfileModal()" class="flex-1 bg-gray-200 py-4 rounded-2xl font-medium">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Driver Modal -->
+  <div id="edit-driver-modal" class="modal">
+    <div class="modal-content bg-white rounded-3xl p-8 shadow-xl">
+      <h3 class="text-2xl font-bold mb-6">Edit Driver Info</h3>
+      <div class="space-y-6">
+        <div><label class="block text-sm font-medium mb-2">Driver Name</label><input type="text" id="edit-name" class="w-full border rounded-xl px-4 py-3"></div>
+        <div class="grid grid-cols-2 gap-6">
+          <div><label class="block text-sm font-medium mb-2">Truck Number</label><input type="text" id="edit-truck" class="w-full border rounded-xl px-4 py-3"></div>
+          <div><label class="block text-sm font-medium mb-2">Dispatch</label><input type="text" id="edit-dispatch" class="w-full border rounded-xl px-4 py-3"></div>
+        </div>
+        <div><label class="block text-sm font-medium mb-2">Company</label><input type="text" id="edit-company" class="w-full border rounded-xl px-4 py-3"></div>
+      </div>
+      <div class="flex gap-4 mt-8">
+        <button onclick="saveDriverEdit()" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-medium">Save Changes</button>
+        <button onclick="hideEditDriverModal()" class="flex-1 bg-gray-200 py-4 rounded-2xl font-medium">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Violation Detail / Edit Modal -->
+  <div id="violation-detail-modal" class="modal">
+    <div class="modal-content bg-white rounded-3xl p-8 shadow-xl max-w-2xl">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-2xl font-bold" id="detail-violation-id"></h3>
+        <button onclick="hideViolationDetailModal()" class="text-3xl text-gray-400 hover:text-gray-600">×</button>
+      </div>
+      
+      <div id="violation-detail-content" class="space-y-6"></div>
+
+      <div class="flex gap-4 mt-10">
+        <button onclick="showEditViolationModal()" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-medium">Edit Event</button>
+        <button onclick="showCorrectionFromDetail()" class="flex-1 bg-green-600 text-white py-4 rounded-2xl font-medium">Apply Correction</button>
+        <button onclick="hideViolationDetailModal()" class="flex-1 bg-gray-200 py-4 rounded-2xl font-medium">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Violation Modal -->
+  <div id="edit-violation-modal" class="modal">
+    <div class="modal-content bg-white rounded-3xl p-8 shadow-xl">
+      <h3 class="text-2xl font-bold mb-6">Edit Event</h3>
+      <div class="space-y-6">
+        <div><label class="block text-sm font-medium mb-2">Date</label><input type="text" id="edit-violation-date" class="w-full border rounded-xl px-4 py-3"></div>
+        <div><label class="block text-sm font-medium mb-2">Description</label><textarea id="edit-violation-desc" rows="4" class="w-full border rounded-xl px-4 py-3"></textarea></div>
+        <div class="grid grid-cols-2 gap-6">
+          <div><label class="block text-sm font-medium mb-2">Points</label><input type="number" id="edit-violation-points" class="w-full border rounded-xl px-4 py-3"></div>
+          <div><label class="block text-sm font-medium mb-2">Category / Type</label>
+            <select id="edit-violation-category" class="w-full border rounded-xl px-4 py-3">
+              <option>Unsafe Driving</option>
+              <option>Driver Fitness</option>
+              <option>Controlled Substance</option>
+              <option>Vehicle Maintenance</option>
+              <option>Hours of Service</option>
+              <option>Cargo Related</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-4 mt-8">
+        <button onclick="saveViolationEdit()" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-medium">Save Changes</button>
+        <button onclick="hideEditViolationModal()" class="flex-1 bg-gray-200 py-4 rounded-2xl font-medium">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let violations = [];
+    let accidents = [];
+    let samsaraEvents = [];
+    let inspections = []; // for inspection=yes violations
+
+    let driversData = [
+      { id: 1, name: "Ali Krelvit", truck: "888", dispatch: "Dispatch A", company: "MNM Freight", categoryPoints: {"Unsafe Driving": 20} },
+      { id: 2, name: "Ramazon Ergashev", truck: "808", dispatch: "Dispatch B", company: "MNM Freight", categoryPoints: {} },
+      { id: 3, name: "Dilshod Sadulloev", truck: "832", dispatch: "Dispatch A", company: "MNM Freight", categoryPoints: {} },
+      { id: 4, name: "Laziz Turaev", truck: "814", dispatch: "Dispatch C", company: "MNM Freight", categoryPoints: {} },
+    ];
+
+    let selectedDriverForViolation = null;
+    let selectedDriverForAccident = null;
+    let selectedDriverForSamsara = null;
+    let currentEditingDriver = null;
+    let currentDetailEventIndex = null;
+    let currentEditingEventIndex = null;
+    let currentDetailSource = null;
+    let currentSubTab = 0;
+
+    // FMCSA 6 Categories as requested
+    const fmcsaCategories = [
+      "Unsafe Driving",
+      "Driver Fitness",
+      "Controlled Substance",
+      "Vehicle Maintenance",
+      "Hours of Service",
+      "Crash Indicator"
+    ];
+
+    function getTotalPoints(driver) {
+      return Object.values(driver.categoryPoints || {}).reduce((sum, val) => sum + val, 0);
+    }
+
+    function switchTab(n) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById('content-' + n).classList.remove('hidden');
+      document.querySelectorAll('.tab').forEach((el, i) => el.classList.toggle('tab-active', i === n));
+    }
+
+    function showAddDriverModal() { document.getElementById('add-driver-modal').style.display = 'flex'; }
+    function hideAddDriverModal() { document.getElementById('add-driver-modal').style.display = 'none'; }
+
+    function addNewDriver() {
+      const name = document.getElementById('new-driver-name').value.trim();
+      if (!name) return alert("Driver name is required");
+      driversData.push({
+        id: Date.now(),
+        name: name,
+        truck: document.getElementById('new-truck').value || '-',
+        dispatch: document.getElementById('new-dispatch').value || 'Unassigned',
+        company: document.getElementById('new-company').value || 'MNM Freight',
+        categoryPoints: {}
+      });
+      renderDrivers();
+      renderLeaderboard();
+      renderCategoryCharts();
+      hideAddDriverModal();
+      alert("Driver added successfully!");
+    }
+
+    function showRecordViolationModal() { 
+      document.getElementById('record-violation-modal').style.display = 'flex'; 
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('violation-date').value = today;
+    }
+    function hideRecordViolationModal() { document.getElementById('record-violation-modal').style.display = 'none'; }
+
+    function showRecordAccidentModal() { 
+      document.getElementById('record-accident-modal').style.display = 'flex'; 
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('accident-date').value = today;
+    }
+    function hideRecordAccidentModal() { 
+      document.getElementById('record-accident-modal').style.display = 'none'; 
+    }
+
+    function showRecordSamsaraModal() { 
+      document.getElementById('record-samsara-modal').style.display = 'flex'; 
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('samsara-date').value = today;
+    }
+    function hideRecordSamsaraModal() { 
+      document.getElementById('record-samsara-modal').style.display = 'none'; 
+    }
+
+    function showCorrectionModal() { 
+      // kept for compatibility
+    }
+    function hideCorrectionModal() { document.getElementById('correction-modal').style.display = 'none'; }
+
+    function filterDriverSuggestions() {
+      const query = document.getElementById('driver-search').value.toLowerCase().trim();
+      const container = document.getElementById('driver-suggestions');
+      container.innerHTML = '';
+      container.classList.toggle('hidden', !query);
+      driversData.filter(d => d.name.toLowerCase().includes(query)).forEach(driver => {
+        const div = document.createElement('div');
+        div.className = "px-4 py-3 hover:bg-gray-100 cursor-pointer border-b last:border-none";
+        div.textContent = driver.name;
+        div.onclick = () => {
+          selectedDriverForViolation = driver;
+          document.getElementById('driver-search').value = driver.name;
+          document.getElementById('truck').value = driver.truck;
+          document.getElementById('dispatch').value = driver.dispatch;
+          document.getElementById('company').value = driver.company;
+          container.classList.add('hidden');
+        };
+        container.appendChild(div);
+      });
+    }
+
+    function filterAccidentDriverSuggestions() {
+      const query = document.getElementById('accident-driver-search').value.toLowerCase().trim();
+      const container = document.getElementById('accident-driver-suggestions');
+      container.innerHTML = '';
+      container.classList.toggle('hidden', !query);
+      driversData.filter(d => d.name.toLowerCase().includes(query)).forEach(driver => {
+        const div = document.createElement('div');
+        div.className = "px-4 py-3 hover:bg-gray-100 cursor-pointer border-b last:border-none";
+        div.textContent = driver.name;
+        div.onclick = () => {
+          selectedDriverForAccident = driver;
+          document.getElementById('accident-driver-search').value = driver.name;
+          document.getElementById('accident-truck').value = driver.truck;
+          document.getElementById('accident-dispatch').value = driver.dispatch;
+          document.getElementById('accident-company').value = driver.company;
+          container.classList.add('hidden');
+        };
+        container.appendChild(div);
+      });
+    }
+
+    function filterSamsaraDriverSuggestions() {
+      const query = document.getElementById('samsara-driver-search').value.toLowerCase().trim();
+      const container = document.getElementById('samsara-driver-suggestions');
+      container.innerHTML = '';
+      container.classList.toggle('hidden', !query);
+      driversData.filter(d => d.name.toLowerCase().includes(query)).forEach(driver => {
+        const div = document.createElement('div');
+        div.className = "px-4 py-3 hover:bg-gray-100 cursor-pointer border-b last:border-none";
+        div.textContent = driver.name;
+        div.onclick = () => {
+          selectedDriverForSamsara = driver;
+          document.getElementById('samsara-driver-search').value = driver.name;
+          document.getElementById('samsara-truck').value = driver.truck;
+          document.getElementById('samsara-dispatch').value = driver.dispatch;
+          document.getElementById('samsara-company').value = driver.company;
+          container.classList.add('hidden');
+        };
+        container.appendChild(div);
+      });
+    }
+
+    function submitViolation(e) {
+      e.preventDefault();
+      if (!selectedDriverForViolation) return alert("Please select a driver");
+      if (!document.getElementById('category').value) return alert("Please select a violation category");
+
+      const finalPoints = parseInt(document.getElementById('final-points').value) || 0;
+      const category = document.getElementById('category').value;
+      let dateVal = document.getElementById('violation-date').value;
+      if (!dateVal) dateVal = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+      const isInspection = document.getElementById('inspection').value === 'yes';
+      const eventType = isInspection ? "Inspection" : "Violation";
+
+      const newEvent = {
+        id: (isInspection ? "INSP-" : "SFT-") + String(1000 + Math.floor(Math.random() * 900)).padStart(3, '0'),
+        date: dateVal,
+        driver: selectedDriverForViolation.name,
+        truck: document.getElementById('truck').value || '-',
+        dispatch: document.getElementById('dispatch').value || '-',
+        company: document.getElementById('company').value,
+        category: category,
+        description: document.getElementById('description').value.trim() || "No description provided",
+        points: finalPoints,
+        corrections: [],
+        type: eventType,
+        isInspection: isInspection
+      };
+
+      if (isInspection) {
+        inspections.unshift(newEvent);
+      } else {
+        violations.unshift(newEvent);
+      }
+
+      if (!selectedDriverForViolation.categoryPoints) selectedDriverForViolation.categoryPoints = {};
+      selectedDriverForViolation.categoryPoints[category] = (selectedDriverForViolation.categoryPoints[category] || 0) + finalPoints;
+
+      renderAllEvents();
+      renderDrivers();
+      renderLeaderboard();
+      renderCategoryCharts();
+
+      alert(`✅ ${eventType} recorded for ${newEvent.driver} (${finalPoints} pts)`);
+      hideRecordViolationModal();
+      e.target.reset();
+      selectedDriverForViolation = null;
+    }
+
+    function submitAccident(e) {
+      e.preventDefault();
+      if (!selectedDriverForAccident) return alert("Please select a driver");
+
+      const finalPoints = parseInt(document.getElementById('accident-final-points').value) || 0;
+      const severity = document.getElementById('accident-severity').value;
+      let dateVal = document.getElementById('accident-date').value;
+      if (!dateVal) dateVal = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+      const newAccident = {
+        id: "ACC-" + String(1000 + Math.floor(Math.random() * 900)).padStart(3, '0'),
+        date: dateVal,
+        driver: selectedDriverForAccident.name,
+        truck: document.getElementById('accident-truck').value || '-',
+        dispatch: document.getElementById('accident-dispatch').value || '-',
+        company: document.getElementById('accident-company').value,
+        severity: severity,
+        description: document.getElementById('accident-description').value.trim() || "No description provided",
+        points: finalPoints,
+        corrections: [],
+        type: "Accident"
+      };
+
+      accidents.unshift(newAccident);
+
+      if (!selectedDriverForAccident.categoryPoints) selectedDriverForAccident.categoryPoints = {};
+      selectedDriverForAccident.categoryPoints["Crash Indicator"] = (selectedDriverForAccident.categoryPoints["Crash Indicator"] || 0) + finalPoints;
+
+      renderAllEvents();
+      renderDrivers();
+      renderLeaderboard();
+      renderCategoryCharts();
+
+      alert(`✅ Accident recorded for ${newAccident.driver} (${finalPoints} pts - ${severity})`);
+      hideRecordAccidentModal();
+      e.target.reset();
+      selectedDriverForAccident = null;
+    }
+
+    function submitSamsaraEvent(e) {
+      e.preventDefault();
+      if (!selectedDriverForSamsara) return alert("Please select a driver");
+
+      const points = parseInt(document.getElementById('samsara-points').value) || 5;
+      const eventType = document.getElementById('samsara-type').value;
+      let dateVal = document.getElementById('samsara-date').value;
+      if (!dateVal) dateVal = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+      const newEvent = {
+        id: "SAM-" + String(1000 + Math.floor(Math.random() * 900)).padStart(3, '0'),
+        date: dateVal,
+        driver: selectedDriverForSamsara.name,
+        truck: document.getElementById('samsara-truck').value || '-',
+        dispatch: document.getElementById('samsara-dispatch').value || '-',
+        company: document.getElementById('samsara-company').value,
+        category: eventType,
+        description: document.getElementById('samsara-description').value.trim() || "No description provided",
+        points: points,
+        corrections: [],
+        type: "Samsara Event"
+      };
+
+      samsaraEvents.unshift(newEvent);
+
+      if (!selectedDriverForSamsara.categoryPoints) selectedDriverForSamsara.categoryPoints = {};
+      selectedDriverForSamsara.categoryPoints[eventType] = (selectedDriverForSamsara.categoryPoints[eventType] || 0) + points;
+
+      renderAllEvents();
+      renderDrivers();
+      renderLeaderboard();
+      renderCategoryCharts();
+
+      alert(`✅ Samsara Event recorded for ${newEvent.driver} (${points} pts)`);
+      hideRecordSamsaraModal();
+      e.target.reset();
+      selectedDriverForSamsara = null;
+    }
+
+    function renderDrivers() {
+      const tbody = document.getElementById('drivers-body');
+      tbody.innerHTML = '';
+      driversData.forEach(driver => {
+        const total = getTotalPoints(driver);
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-gray-50 cursor-pointer";
+        tr.onclick = () => showDriverProfile(driver);
+        tr.innerHTML = `
+          <td class="p-5 font-medium">${driver.name}</td>
+          <td class="p-5">${driver.truck}</td>
+          <td class="p-5">${driver.dispatch}</td>
+          <td class="p-5">${driver.company}</td>
+          <td class="p-5 font-bold">${total}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function showDriverProfile(driver) {
+      currentEditingDriver = driver;
+      document.getElementById('profile-driver-name').textContent = driver.name;
+      document.getElementById('profile-truck').textContent = driver.truck;
+      document.getElementById('profile-dispatch').textContent = driver.dispatch;
+      document.getElementById('profile-company').textContent = driver.company;
+
+      const total = getTotalPoints(driver);
+      const totalEl = document.getElementById('profile-total-points');
+      totalEl.textContent = `${total} pts`;
+      totalEl.className = `inline-block px-5 py-1 rounded-full text-white font-semibold ${total > 40 ? 'bg-red-500' : total > 20 ? 'bg-amber-500' : 'bg-green-500'}`;
+
+      const catContainer = document.getElementById('profile-category-points');
+      catContainer.innerHTML = '';
+      Object.keys(driver.categoryPoints || {}).forEach(cat => {
+        const div = document.createElement('div');
+        div.className = "bg-gray-100 p-4 rounded-2xl flex justify-between";
+        div.innerHTML = `<span>${cat}</span><span class="font-bold">${driver.categoryPoints[cat]} pts</span>`;
+        catContainer.appendChild(div);
+      });
+
+      const histContainer = document.getElementById('profile-violations');
+      histContainer.innerHTML = '';
+      const driverViolations = violations.filter(v => v.driver === driver.name);
+      if (driverViolations.length === 0) {
+        histContainer.innerHTML = `<p class="text-gray-500 text-center py-8">No violations recorded yet.</p>`;
+      } else {
+        driverViolations.forEach((v) => {
+          const originalIdx = violations.indexOf(v);
+          const div = document.createElement('div');
+          div.className = "bg-gray-50 p-4 rounded-2xl border cursor-pointer hover:shadow";
+          div.onclick = () => showEventDetail(originalIdx, 'violation');
+          div.innerHTML = `
+            <div class="flex justify-between">
+              <div>
+                <div class="font-medium">${v.id} - ${v.category}</div>
+                <div class="text-sm text-gray-500">${v.date}</div>
+                <div class="text-sm">${v.description}</div>
+              </div>
+              <div class="font-bold text-red-600">${v.points} pts</div>
+            </div>
+          `;
+          histContainer.appendChild(div);
+        });
+      }
+
+      const accidentHistContainer = document.getElementById('profile-accidents');
+      accidentHistContainer.innerHTML = '';
+      const driverAccidents = accidents.filter(a => a.driver === driver.name);
+      if (driverAccidents.length === 0) {
+        accidentHistContainer.innerHTML = `<p class="text-gray-500 text-center py-8">No accidents recorded yet.</p>`;
+      } else {
+        driverAccidents.forEach((a) => {
+          const originalIdx = accidents.indexOf(a);
+          const div = document.createElement('div');
+          div.className = "bg-orange-50 p-4 rounded-2xl border cursor-pointer hover:shadow";
+          div.onclick = () => showEventDetail(originalIdx, 'accident');
+          div.innerHTML = `
+            <div class="flex justify-between">
+              <div>
+                <div class="font-medium">${a.id} - ${a.severity}</div>
+                <div class="text-sm text-gray-500">${a.date}</div>
+                <div class="text-sm">${a.description}</div>
+              </div>
+              <div class="font-bold text-orange-600">${a.points} pts</div>
+            </div>
+          `;
+          accidentHistContainer.appendChild(div);
+        });
+      }
+
+      document.getElementById('driver-profile-modal').style.display = 'flex';
+    }
+
+    function hideDriverProfileModal() {
+      document.getElementById('driver-profile-modal').style.display = 'none';
+    }
+
+    function showEditDriverModal() {
+      if (!currentEditingDriver) return;
+      hideDriverProfileModal();
+      document.getElementById('edit-name').value = currentEditingDriver.name;
+      document.getElementById('edit-truck').value = currentEditingDriver.truck;
+      document.getElementById('edit-dispatch').value = currentEditingDriver.dispatch;
+      document.getElementById('edit-company').value = currentEditingDriver.company;
+      document.getElementById('edit-driver-modal').style.display = 'flex';
+    }
+
+    function hideEditDriverModal() {
+      document.getElementById('edit-driver-modal').style.display = 'none';
+    }
+
+    function saveDriverEdit() {
+      if (!currentEditingDriver) return;
+      currentEditingDriver.name = document.getElementById('edit-name').value || currentEditingDriver.name;
+      currentEditingDriver.truck = document.getElementById('edit-truck').value || currentEditingDriver.truck;
+      currentEditingDriver.dispatch = document.getElementById('edit-dispatch').value || currentEditingDriver.dispatch;
+      currentEditingDriver.company = document.getElementById('edit-company').value || currentEditingDriver.company;
+
+      renderDrivers();
+      renderLeaderboard();
+      hideEditDriverModal();
+      showDriverProfile(currentEditingDriver);
+      alert("Driver information updated successfully!");
+    }
+
+    function switchSubTab(n) {
+      currentSubTab = n;
+      document.querySelectorAll('.subtab').forEach((el, i) => el.classList.toggle('subtab-active', i === n));
+      renderAllEvents();
+    }
+
+    function renderAllEvents() {
+      const tbody = document.getElementById('all-events-body');
+      tbody.innerHTML = '';
+
+      let eventsToShow = [];
+
+      if (currentSubTab === 0) {
+        eventsToShow = [
+          ...violations.map(v => ({...v, source: 'violation'})),
+          ...inspections.map(i => ({...i, source: 'inspection'})),
+          ...accidents.map(a => ({...a, source: 'accident'})),
+          ...samsaraEvents.map(s => ({...s, source: 'samsara'}))
+        ];
+      } else if (currentSubTab === 1) {
+        eventsToShow = violations.map(v => ({...v, source: 'violation'}));
+      } else if (currentSubTab === 2) {
+        eventsToShow = inspections.map(i => ({...i, source: 'inspection'}));
+      } else if (currentSubTab === 3) {
+        eventsToShow = accidents.map(a => ({...a, source: 'accident'}));
+      } else if (currentSubTab === 4) {
+        eventsToShow = samsaraEvents.map(s => ({...s, source: 'samsara'}));
+      }
+
+      eventsToShow.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      eventsToShow.forEach((event, globalIndex) => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-gray-50 cursor-pointer";
+        tr.onclick = () => showEventDetail(globalIndex, event.source);
+
+        let label = event.type || event.category;
+        let rowHTML = `
+          <td class="p-5"></td>
+          <td class="p-5 font-mono">${event.id}</td>
+          <td class="p-5">${event.date}</td>
+          <td class="p-5">${event.driver}</td>
+          <td class="p-5">${event.truck}</td>
+          <td class="p-5">${event.dispatch}</td>
+          <td class="p-5">${label}</td>
+          <td class="p-5 font-bold ${event.source === 'accident' ? 'text-orange-600' : 'text-red-600'}">${event.points}</td>
+          <td class="p-5">
+            <button onclick="event.stopImmediatePropagation(); deleteEvent(${globalIndex}, '${event.source}');" class="text-red-500 hover:text-red-700 mr-3"><i class="fas fa-trash"></i></button>
+          </td>
+        `;
+
+        tr.innerHTML = rowHTML;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('total-violations').textContent = violations.length + inspections.length;
+      document.getElementById('total-accidents').textContent = accidents.length;
+    }
+
+    function showEventDetail(index, source) {
+      currentDetailEventIndex = index;
+      currentDetailSource = source;
+      let event;
+      if (source === 'violation') event = violations[index];
+      else if (source === 'inspection') event = inspections[index];
+      else if (source === 'accident') event = accidents[index];
+      else event = samsaraEvents[index];
+
+      let html = `
+        <div class="bg-gray-50 p-5 rounded-2xl">
+          <div class="grid grid-cols-2 gap-4 text-sm">
+            <div><strong>Date:</strong> ${event.date}</div>
+            <div><strong>Driver:</strong> ${event.driver}</div>
+            <div><strong>Truck:</strong> ${event.truck}</div>
+            <div><strong>Dispatch:</strong> ${event.dispatch}</div>
+            <div><strong>Type:</strong> ${event.type || event.category || event.severity}</div>
+            <div><strong>Current Points:</strong> <span class="font-bold text-red-600">${event.points}</span></div>
+          </div>
+          <div class="mt-4">
+            <strong>Description:</strong>
+            <p class="mt-1 text-gray-700">${event.description}</p>
+          </div>
+        </div>
+      `;
+
+      if (event.corrections && event.corrections.length > 0) {
+        html += `<h4 class="font-semibold mt-6 mb-3">Correction History</h4>`;
+        event.corrections.forEach(c => {
+          html += `
+            <div class="bg-green-50 border border-green-200 p-4 rounded-2xl mb-3">
+              <div class="flex justify-between text-sm">
+                <div><strong>${c.type}</strong> - ${c.date}</div>
+                <div class="font-medium text-green-700">- ${c.pointsReduced} pts</div>
+              </div>
+              <div class="text-sm text-gray-600 mt-1">${c.notes}</div>
+            </div>
+          `;
+        });
+      }
+
+      document.getElementById('violation-detail-content').innerHTML = html;
+      document.getElementById('detail-violation-id').textContent = event.id;
+      document.getElementById('violation-detail-modal').style.display = 'flex';
+    }
+
+    function hideViolationDetailModal() {
+      document.getElementById('violation-detail-modal').style.display = 'none';
+    }
+
+    function showEditViolationModal() {
+      if (currentDetailEventIndex === null) return;
+      hideViolationDetailModal();
+
+      let v;
+      if (currentDetailSource === 'violation') v = violations[currentDetailEventIndex];
+      else if (currentDetailSource === 'inspection') v = inspections[currentDetailEventIndex];
+      else if (currentDetailSource === 'accident') v = accidents[currentDetailEventIndex];
+      else v = samsaraEvents[currentDetailEventIndex];
+
+      currentEditingEventIndex = currentDetailEventIndex;
+
+      document.getElementById('edit-violation-date').value = v.date;
+      document.getElementById('edit-violation-desc').value = v.description;
+      document.getElementById('edit-violation-points').value = v.points;
+      document.getElementById('edit-violation-category').value = v.category || v.severity || "Other";
+      document.getElementById('edit-violation-modal').style.display = 'flex';
+    }
+
+    function hideEditViolationModal() {
+      document.getElementById('edit-violation-modal').style.display = 'none';
+    }
+
+    function saveViolationEdit() {
+      if (currentEditingEventIndex === null) return;
+      let v;
+      if (currentDetailSource === 'violation') v = violations[currentEditingEventIndex];
+      else if (currentDetailSource === 'inspection') v = inspections[currentEditingEventIndex];
+      else if (currentDetailSource === 'accident') v = accidents[currentDetailEventIndex];
+      else v = samsaraEvents[currentDetailEventIndex];
+      
+      const oldPoints = v.points;
+      const oldCategory = v.category || v.severity;
+      
+      v.date = document.getElementById('edit-violation-date').value || v.date;
+      v.description = document.getElementById('edit-violation-desc').value.trim() || v.description;
+      v.points = parseInt(document.getElementById('edit-violation-points').value) || v.points;
+      v.category = document.getElementById('edit-violation-category').value;
+
+      const driver = driversData.find(d => d.name === v.driver);
+      if (driver) {
+        if (oldCategory !== v.category) {
+          if (driver.categoryPoints[oldCategory]) driver.categoryPoints[oldCategory] = Math.max(0, (driver.categoryPoints[oldCategory] || 0) - oldPoints);
+          driver.categoryPoints[v.category] = (driver.categoryPoints[v.category] || 0) + v.points;
+        } else {
+          const diff = v.points - oldPoints;
+          driver.categoryPoints[v.category || "Other"] = Math.max(0, (driver.categoryPoints[v.category || "Other"] || 0) + diff);
+        }
+      }
+
+      renderAllEvents();
+      renderDrivers();
+      renderLeaderboard();
+      renderCategoryCharts();
+      hideEditViolationModal();
+      showEventDetail(currentEditingEventIndex, currentDetailSource);
+      alert("Event updated successfully!");
+    }
+
+    function deleteEvent(globalIndex, source) {
+      if (confirm("Delete this event?")) {
+        let arr;
+        if (source === 'violation') arr = violations;
+        else if (source === 'inspection') arr = inspections;
+        else if (source === 'accident') arr = accidents;
+        else arr = samsaraEvents;
+
+        const event = arr[globalIndex];
+        const driver = driversData.find(d => d.name === event.driver);
+        const catKey = event.category || "Crash Indicator";
+        if (driver && driver.categoryPoints[catKey]) {
+          driver.categoryPoints[catKey] -= event.points;
+          if (driver.categoryPoints[catKey] <= 0) delete driver.categoryPoints[catKey];
+        }
+        arr.splice(globalIndex, 1);
+        renderAllEvents();
+        renderDrivers();
+        renderLeaderboard();
+        renderCategoryCharts();
+      }
+    }
+
+    function showCorrectionFromDetail() {
+      hideViolationDetailModal();
+      const source = currentDetailSource;
+      let event;
+      if (source === 'violation') event = violations[currentDetailEventIndex];
+      else if (source === 'inspection') event = inspections[currentDetailEventIndex];
+      else if (source === 'accident') event = accidents[currentDetailEventIndex];
+      else event = samsaraEvents[currentDetailEventIndex];
+
+      document.getElementById('correction-event-info').innerHTML = `
+        <div class="text-sm">
+          <div><strong>ID:</strong> ${event.id}</div>
+          <div><strong>Driver:</strong> ${event.driver}</div>
+          <div><strong>Type:</strong> ${event.type || event.category}</div>
+          <div><strong>Current Points:</strong> ${event.points}</div>
+        </div>
+      `;
+      document.getElementById('correction-modal').style.display = 'flex';
+    }
+
+    function applyCorrectionFromDetail() {
+      const reducePoints = parseInt(document.getElementById('corr-points').value) || 0;
+      if (reducePoints <= 0) return alert("Points to reduce must be > 0");
+
+      let event;
+      if (currentDetailSource === 'violation') event = violations[currentDetailEventIndex];
+      else if (currentDetailSource === 'inspection') event = inspections[currentDetailEventIndex];
+      else if (currentDetailSource === 'accident') event = accidents[currentDetailEventIndex];
+      else event = samsaraEvents[currentDetailEventIndex];
+
+      const driver = driversData.find(d => d.name === event.driver);
+      const correctionType = document.getElementById('correction-type').value;
+      const notes = document.getElementById('correction-notes').value.trim() || "No notes provided";
+
+      const newCorrection = {
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        type: correctionType,
+        pointsReduced: reducePoints,
+        notes: notes
+      };
+
+      event.corrections.push(newCorrection);
+      event.points = Math.max(0, event.points - reducePoints);
+
+      if (driver) {
+        const catKey = event.category || "Crash Indicator";
+        if (driver.categoryPoints[catKey]) {
+          driver.categoryPoints[catKey] = Math.max(0, driver.categoryPoints[catKey] - reducePoints);
+        }
+      }
+
+      renderAllEvents();
+      renderDrivers();
+      renderLeaderboard();
+      renderCategoryCharts();
+
+      alert(`✅ Correction applied (-${reducePoints} points)`);
+      hideCorrectionModal();
+      showEventDetail(currentDetailEventIndex, currentDetailSource);
+    }
+
+    function updatePointsPreview() {
+      const base = parseInt(document.getElementById('points').value) || 0;
+      const isInspection = document.getElementById('inspection').value === 'yes';
+      document.getElementById('final-points').value = isInspection ? base * 3 : base;
+    }
+
+    function updateAccidentPointsPreview() {
+      const base = parseInt(document.getElementById('accident-points').value) || 0;
+      document.getElementById('accident-final-points').value = base;
+    }
+
+    function renderLeaderboard() {
+      const search = document.getElementById('leader-search').value.toLowerCase().trim();
+      const filter = document.getElementById('category-filter').value;
+      
+      let filtered = driversData;
+      if (search) filtered = filtered.filter(d => d.name.toLowerCase().includes(search));
+      if (filter !== 'all') filtered = filtered.filter(d => d.categoryPoints && d.categoryPoints[filter]);
+
+      const tbody = document.getElementById('leaderboard-body');
+      tbody.innerHTML = '';
+      const sorted = [...filtered].sort((a, b) => getTotalPoints(b) - getTotalPoints(a));
+      sorted.forEach((d, i) => {
+        const total = getTotalPoints(d);
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-gray-50 cursor-pointer";
+        tr.onclick = () => showDriverProfile(d);
+        tr.innerHTML = `
+          <td class="p-5 font-bold text-blue-600">#${i+1}</td>
+          <td class="p-5">${d.name}</td>
+          <td class="p-5">${d.truck}</td>
+          <td class="p-5">${d.company}</td>
+          <td class="p-5 font-bold ${total > 40 ? 'text-red-600' : 'text-amber-600'}">${total}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      const grandTotal = sorted.reduce((sum, d) => sum + getTotalPoints(d), 0);
+      document.getElementById('total-points').textContent = grandTotal;
+      document.getElementById('total-drivers').textContent = driversData.length;
+    }
+
+    function filterLeaderboard() {
+      renderLeaderboard();
+    }
+
+    function renderCategoryCharts() {
+      const container = document.getElementById('category-charts');
+      container.innerHTML = '';
+
+      const categoryTotals = {};
+      // Initialize all requested 6 categories with 0
+      fmcsaCategories.forEach(cat => {
+        categoryTotals[cat] = 0;
+      });
+
+      violations.forEach(v => {
+        if (v.category && categoryTotals[v.category] !== undefined) {
+          categoryTotals[v.category] += v.points;
+        } else if (categoryTotals["Other"] !== undefined) {
+          categoryTotals["Other"] += v.points;
+        }
+      });
+      inspections.forEach(i => {
+        if (i.category && categoryTotals[i.category] !== undefined) {
+          categoryTotals[i.category] += i.points;
+        } else if (categoryTotals["Other"] !== undefined) {
+          categoryTotals["Other"] += i.points;
+        }
+      });
+      accidents.forEach(a => {
+        if (categoryTotals["Crash Indicator"] !== undefined) {
+          categoryTotals["Crash Indicator"] += a.points;
+        }
+      });
+      samsaraEvents.forEach(s => {
+        if (s.category && categoryTotals[s.category] !== undefined) {
+          categoryTotals[s.category] += s.points;
+        } else if (categoryTotals["Other"] !== undefined) {
+          categoryTotals["Other"] += s.points;
+        }
+      });
+
+      const colors = {
+        'Unsafe Driving': '#ef4444',
+        'Driver Fitness': '#10b981',
+        'Controlled Substance': '#8b5cf6',
+        'Vehicle Maintenance': '#eab308',
+        'Hours of Service': '#f59e0b',
+        'Crash Indicator': '#f97316'
+      };
+
+      fmcsaCategories.forEach(cat => {
+        const totalCatPoints = categoryTotals[cat] || 0;
+        const grandTotal = Object.values(categoryTotals).reduce((a, b) => a + b, 0);
+        const perc = grandTotal > 0 ? Math.round((totalCatPoints / grandTotal) * 100) : 0;
+
+        const div = document.createElement('div');
+        div.className = "bg-white p-4 rounded-3xl shadow text-center";
+        div.innerHTML = `
+          <h4 class="font-medium mb-2 text-sm" style="color: ${colors[cat] || '#64748b'}">${cat}</h4>
+          <canvas id="chart-${cat.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '')}" width="80" height="80"></canvas>
+          <div class="mt-2 text-lg font-bold">${totalCatPoints} pts</div>
+        `;
+        container.appendChild(div);
+
+        setTimeout(() => {
+          new Chart(document.getElementById(`chart-${cat.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '')}`), {
+            type: 'doughnut',
+            data: { 
+              datasets: [{ 
+                data: [perc, 100 - perc], 
+                backgroundColor: [colors[cat] || '#64748b', '#e5e7eb'] 
+              }] 
+            },
+            options: { 
+              cutout: '78%', 
+              plugins: { legend: { display: false } } 
+            }
+          });
+        }, 10);
+      });
+    }
+
+    window.onload = () => {
+      renderDrivers();
+      renderAllEvents();
+      renderLeaderboard();
+      renderCategoryCharts();
+      switchTab(0);
+      switchSubTab(0);
+    };
+  </script>
+</body>
+</html>
