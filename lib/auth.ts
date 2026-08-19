@@ -2,7 +2,7 @@ import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 
 const secret = new TextEncoder().encode(
-  (process.env.JWT_SECRET as string) || 'change-this-to-a-long-random-secret-at-least-32-chars'
+  process.env.JWT_SECRET || 'super-secret-key-change-me-later-32chars'
 );
 
 export async function createToken(payload: { userId: number; email: string }) {
