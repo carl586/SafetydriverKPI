@@ -8,7 +8,6 @@ interface Driver {
   id: number;
   name: string;
   truck: string;
-  dispatch: string;
   company: string;
   total_points: number;
   categoryPoints: Record<string, number>;
@@ -20,7 +19,6 @@ interface SafetyEvent {
   driver_id: number;
   driver: string;
   truck: string;
-  dispatch: string;
   company: string;
   event_date: string;
   category: string | null;
@@ -62,12 +60,11 @@ export default function DashboardPage() {
   const [selectedEvent, setSelectedEvent] = useState<SafetyEvent | null>(null);
 
   // Form states
-  const [newDriver, setNewDriver] = useState({ name: '', truck: '', dispatch: '', company: 'MNM Freight' });
+  const [newDriver, setNewDriver] = useState({ name: '', truck: '', company: '', companyNew: '' });
   const [violationForm, setViolationForm] = useState({
     driver_id: '',
     truck: '',
-    dispatch: '',
-    company: 'MNM Freight',
+    company: '',
     event_date: new Date().toISOString().split('T')[0],
     category: '',
     description: '',
@@ -77,8 +74,7 @@ export default function DashboardPage() {
   const [accidentForm, setAccidentForm] = useState({
     driver_id: '',
     truck: '',
-    dispatch: '',
-    company: 'MNM Freight',
+    company: '',
     event_date: new Date().toISOString().split('T')[0],
     severity: 'Moderate',
     description: '',
@@ -87,8 +83,7 @@ export default function DashboardPage() {
   const [samsaraForm, setSamsaraForm] = useState({
     driver_id: '',
     truck: '',
-    dispatch: '',
-    company: 'MNM Freight',
+    company: '',
     event_date: new Date().toISOString().split('T')[0],
     category: 'Harsh Braking',
     description: '',
@@ -181,14 +176,17 @@ export default function DashboardPage() {
 
   async function addDriver() {
     if (!newDriver.name.trim()) return alert('Driver name is required');
+    const resolvedCompany = newDriver.company === '__new__' ? newDriver.companyNew.trim() : newDriver.company;
+    if (!resolvedCompany) return alert('Please select or enter a company');
+
     const res = await fetch('/api/drivers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newDriver),
+      body: JSON.stringify({ name: newDriver.name, truck: newDriver.truck, company: resolvedCompany }),
     });
     if (res.ok) {
       setShowAddDriver(false);
-      setNewDriver({ name: '', truck: '', dispatch: '', company: 'MNM Freight' });
+      setNewDriver({ name: '', truck: '', company: '', companyNew: '' });
       loadData();
       alert('Driver added successfully!');
     }
@@ -326,7 +324,6 @@ export default function DashboardPage() {
         ...f,
         driver_id: String(driver.id),
         truck: driver.truck,
-        dispatch: driver.dispatch,
         company: driver.company,
       }));
     } else if (type === 'accident') {
@@ -334,7 +331,6 @@ export default function DashboardPage() {
         ...f,
         driver_id: String(driver.id),
         truck: driver.truck,
-        dispatch: driver.dispatch,
         company: driver.company,
       }));
     } else {
@@ -342,7 +338,6 @@ export default function DashboardPage() {
         ...f,
         driver_id: String(driver.id),
         truck: driver.truck,
-        dispatch: driver.dispatch,
         company: driver.company,
       }));
     }
@@ -372,9 +367,6 @@ export default function DashboardPage() {
             <button onClick={() => setCurrentTab(2)} className={`px-4 py-2 ${currentTab === 2 ? 'tab-active' : ''}`}>
               Drivers
             </button>
-            <button onClick={() => setCurrentTab(3)} className={`px-4 py-2 ${currentTab === 3 ? 'tab-active' : ''}`}>
-              Dispatches
-            </button>
             <select
               value={selectedCompany}
               onChange={(e) => setSelectedCompany(e.target.value)}
@@ -402,7 +394,7 @@ export default function DashboardPage() {
               <div>
                 <h3 className="text-3xl font-semibold">{selectedCompany === 'all' ? 'All Companies' : selectedCompany}</h3>
                 <p className="text-gray-500">
-                  Total Drivers: {scopedDrivers.length} | Active Dispatches: 12 | Total Violations: {totalViolations} | Total Accidents: {totalAccidents}
+                  Total Drivers: {scopedDrivers.length} | Total Violations: {totalViolations} | Total Accidents: {totalAccidents}
                 </p>
               </div>
               <div className="text-right">
@@ -573,7 +565,6 @@ export default function DashboardPage() {
                 <tr>
                   <th className="p-5 text-left">Driver</th>
                   <th className="p-5 text-left">Truck</th>
-                  <th className="p-5 text-left">Dispatch</th>
                   <th className="p-5 text-left">Company</th>
                   <th className="p-5 text-left font-bold">TOTAL POINTS</th>
                 </tr>
@@ -583,23 +574,12 @@ export default function DashboardPage() {
                   <tr key={d.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => openProfile(d)}>
                     <td className="p-5 font-medium">{d.name}</td>
                     <td className="p-5">{d.truck}</td>
-                    <td className="p-5">{d.dispatch}</td>
                     <td className="p-5">{d.company}</td>
                     <td className="p-5 font-bold">{getTotalPoints(d)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-        </div>
-      )}
-
-      {/* ===================== DISPATCHES ===================== */}
-      {currentTab === 3 && (
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <h2 className="text-3xl font-bold mb-8">Dispatches List</h2>
-          <div className="bg-white p-20 rounded-3xl shadow text-center text-gray-500">
-            Dispatches List - Coming Soon
           </div>
         </div>
       )}
@@ -616,19 +596,31 @@ export default function DashboardPage() {
                 <label className="block text-sm font-medium mb-2">Driver Name</label>
                 <input className="w-full border rounded-xl px-4 py-3" value={newDriver.name} onChange={(e) => setNewDriver({ ...newDriver, name: e.target.value })} />
               </div>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Truck Number</label>
-                  <input className="w-full border rounded-xl px-4 py-3" value={newDriver.truck} onChange={(e) => setNewDriver({ ...newDriver, truck: e.target.value })} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Dispatch</label>
-                  <input className="w-full border rounded-xl px-4 py-3" value={newDriver.dispatch} onChange={(e) => setNewDriver({ ...newDriver, dispatch: e.target.value })} />
-                </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Truck Number</label>
+                <input className="w-full border rounded-xl px-4 py-3" value={newDriver.truck} onChange={(e) => setNewDriver({ ...newDriver, truck: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Company</label>
-                <input className="w-full border rounded-xl px-4 py-3" value={newDriver.company} onChange={(e) => setNewDriver({ ...newDriver, company: e.target.value })} />
+                <label className="block text-sm font-medium mb-2">Company *</label>
+                <select
+                  className="w-full border rounded-xl px-4 py-3"
+                  value={newDriver.company}
+                  onChange={(e) => setNewDriver({ ...newDriver, company: e.target.value })}
+                >
+                  <option value="">-- Select Company --</option>
+                  {companies.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                  <option value="__new__">+ Add new company</option>
+                </select>
+                {newDriver.company === '__new__' && (
+                  <input
+                    className="w-full border rounded-xl px-4 py-3 mt-3"
+                    placeholder="New company name"
+                    value={newDriver.companyNew}
+                    onChange={(e) => setNewDriver({ ...newDriver, companyNew: e.target.value })}
+                  />
+                )}
               </div>
             </div>
             <div className="flex gap-4 mt-8">
@@ -661,15 +653,9 @@ export default function DashboardPage() {
                   ))}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Truck</label>
-                  <input className="w-full border rounded-xl px-4 py-3" value={violationForm.truck} onChange={(e) => setViolationForm({ ...violationForm, truck: e.target.value })} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Dispatch</label>
-                  <input className="w-full border rounded-xl px-4 py-3" value={violationForm.dispatch} onChange={(e) => setViolationForm({ ...violationForm, dispatch: e.target.value })} />
-                </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Truck</label>
+                <input className="w-full border rounded-xl px-4 py-3" value={violationForm.truck} onChange={(e) => setViolationForm({ ...violationForm, truck: e.target.value })} />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Date</label>
@@ -740,15 +726,9 @@ export default function DashboardPage() {
                   ))}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Truck</label>
-                  <input className="w-full border rounded-xl px-4 py-3" value={accidentForm.truck} onChange={(e) => setAccidentForm({ ...accidentForm, truck: e.target.value })} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Dispatch</label>
-                  <input className="w-full border rounded-xl px-4 py-3" value={accidentForm.dispatch} onChange={(e) => setAccidentForm({ ...accidentForm, dispatch: e.target.value })} />
-                </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Truck</label>
+                <input className="w-full border rounded-xl px-4 py-3" value={accidentForm.truck} onChange={(e) => setAccidentForm({ ...accidentForm, truck: e.target.value })} />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Date</label>
@@ -805,15 +785,9 @@ export default function DashboardPage() {
                   ))}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Truck</label>
-                  <input className="w-full border rounded-xl px-4 py-3" value={samsaraForm.truck} onChange={(e) => setSamsaraForm({ ...samsaraForm, truck: e.target.value })} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Dispatch</label>
-                  <input className="w-full border rounded-xl px-4 py-3" value={samsaraForm.dispatch} onChange={(e) => setSamsaraForm({ ...samsaraForm, dispatch: e.target.value })} />
-                </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Truck</label>
+                <input className="w-full border rounded-xl px-4 py-3" value={samsaraForm.truck} onChange={(e) => setSamsaraForm({ ...samsaraForm, truck: e.target.value })} />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Date</label>
@@ -856,7 +830,6 @@ export default function DashboardPage() {
             </div>
             <div className="grid grid-cols-2 gap-6 mb-8">
               <div><p className="text-sm text-gray-500">Truck</p><p className="font-medium text-lg">{selectedDriver.truck}</p></div>
-              <div><p className="text-sm text-gray-500">Dispatch</p><p className="font-medium text-lg">{selectedDriver.dispatch}</p></div>
               <div><p className="text-sm text-gray-500">Company</p><p className="font-medium">{selectedDriver.company}</p></div>
               <div>
                 <p className="text-sm text-gray-500">Total Points</p>
