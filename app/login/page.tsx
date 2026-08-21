@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('admin@mnmfreight.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -41,7 +41,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-10 rounded-3xl shadow-xl w-full max-w-md">
         <h1 className="text-3xl font-bold text-blue-700 mb-2">Safety KPI</h1>
-        <p className="text-gray-500 mb-8">MNM Freight</p>
+        <p className="text-gray-500 mb-8">Sign in to your dashboard</p>
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div>
